@@ -20,6 +20,63 @@
 /* Ethernet addresses are 6 bytes */
 #define ETHER_ADDR_LEN	6
 
+/*DNS Structure - https://en.wikipedia.org/wiki/Domain_Name_System#Authoritative_name_server*/
+/*DNS header*/
+struct dns_header {
+	u_int16_t id;	/* identification number */			
+	u_int16_t flags;	/* flags */
+	u_int16_t qdcount;	/* number of question entries */
+	u_int16_t ancount;	/* number of answer entries */
+	u_int16_t atcount;	/* number of authority entries */
+	u_int16_t rrcount;	/* number of resource entries */
+};
+
+/*DNS question*/
+struct dns_question {
+	char *name;
+	u_int16_t type;
+	u_int16_t class;
+};
+
+/*DNS answer*/
+struct dns_answer {
+	char *name;
+	u_int16_t type;
+	u_int16_t class;
+	u_int32_t ttl;
+	u_int16_t len;
+	char *data;
+};
+
+/*DNS authority*/
+struct dns_authority {
+	char *name;
+	u_int16_t type;
+	u_int16_t class;
+	u_int32_t ttl;
+	u_int16_t len;
+	char *data;
+};
+
+/*DNS resource record*/
+struct dns_resource {
+	char *name;
+	u_int16_t type;
+	u_int16_t class;
+	u_int32_t ttl;
+	u_int16_t len;
+	char *data;
+};
+
+/*DNS packet*/
+struct dns_packet {
+	struct dns_header header;
+	struct dns_question *question;
+	struct dns_answer *answer;
+	struct dns_authority *authority;
+	struct dns_resource *resource;
+};
+
 /* Ethernet header */
 struct sniff_ethernet {
 	u_char  ether_dhost[ETHER_ADDR_LEN];    /* destination host address */
