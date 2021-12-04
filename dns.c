@@ -1,5 +1,7 @@
+/* code modified from https://www.tcpdump.org/sniffex.c */
 #include <pcap.h>
 #include <stdio.h>
+#include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -28,19 +30,19 @@ struct sniff_ethernet {
 
 /* IPV4 header */
 struct sniff_ipv4 {
-        u_char  ip_vhl;                 /* version << 4 | header length >> 2 */
-        u_char  ip_tos;                 /* type of service */
-        u_short ip_len;                 /* total length */
-        u_short ip_id;                  /* identification */
-        u_short ip_off;                 /* fragment offset field */
-        #define IP_RF 0x8000            /* reserved fragment flag */
-        #define IP_DF 0x4000            /* don't fragment flag */
-        #define IP_MF 0x2000            /* more fragments flag */
-        #define IP_OFFMASK 0x1fff       /* mask for fragmenting bits */
-        u_char  ip_ttl;                 /* time to live */
-        u_char  ip_p;                   /* protocol */
-        u_short ip_sum;                 /* checksum */
-        struct  in_addr ip_src,ip_dst;  /* source and dest address */
+	u_char  ip_vhl;                 /* version << 4 | header length >> 2 */
+	u_char  ip_tos;                 /* type of service */
+	u_short ip_len;                 /* total length */
+	u_short ip_id;                  /* identification */
+	u_short ip_off;                 /* fragment offset field */
+	#define IP_RF 0x8000            /* reserved fragment flag */
+	#define IP_DF 0x4000            /* don't fragment flag */
+	#define IP_MF 0x2000            /* more fragments flag */
+	#define IP_OFFMASK 0x1fff       /* mask for fragmenting bits */
+	u_char  ip_ttl;                 /* time to live */
+	u_char  ip_p;                   /* protocol */
+	u_short ip_sum;                 /* checksum */
+	struct  in_addr ip_src,ip_dst;  /* source and dest address */
 };
 #define IP_HL(ip)               (((ip)->ip_vhl) & 0x0f)
 #define IP_V(ip)                (((ip)->ip_vhl) >> 4)
@@ -67,11 +69,8 @@ struct sniff_udp {
 };
 
 void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet);
-
 void print_payload(const u_char *payload, int len);
-
 void print_hex_ascii_line(const u_char *payload, int len, int offset);
-
 void print_app_usage(void);
 
 
@@ -145,7 +144,6 @@ void print_hex_ascii_line(const u_char *payload, int len, int offset)
  */
 void print_payload(const u_char *payload, int len)
 {
-
 	int len_rem = len;
 	int line_width = 16;			/* number of bytes per line */
 	int line_len;
@@ -189,7 +187,6 @@ void print_payload(const u_char *payload, int len)
  */
 void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 {
-
 	static int count = 1;                   /* packet counter */
 
 	/* declare pointers to packet headers */
@@ -207,10 +204,10 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 	/* define ethernet header */
 	ethernet = (struct sniff_ethernet*)(packet);
 
-	/* define/compute ip header offset */
+	/* compute IP version */
 	u_char version = *(u_char *)(packet + SIZE_ETHERNET);
-	version >>= 4; // version is present in the first 4 bits of the field in header
-	printf("version: %u\n", version);
+	version >>= 4; /* right shift 4 bits as version present in most significant 4 bits */
+
 	if(version == 4){
 		struct sniff_ipv4* ip = (struct sniff_ipv4*)(packet + SIZE_ETHERNET);
 		size_ip = IP_HL(ip)*4;
@@ -222,55 +219,23 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 		printf("       From: %s\n", inet_ntoa(ip->ip_src));
 		printf("         To: %s\n", inet_ntoa(ip->ip_dst));
 
-		/* determine protocol */
-		switch(ip->ip_p) {
-			case IPPROTO_TCP:
-				printf("   Protocol: TCP\n");
-				return;
-			case IPPROTO_UDP:
-				printf("   Protocol: UDP\n");
-				break;
-			case IPPROTO_ICMP:
-				printf("   Protocol: ICMP\n");
-				return;
-			case IPPROTO_IP:
-				printf("   Protocol: IP\n");
-				return;
-			default:
-				printf("   Protocol: unknown\n");
-				return;
-		}
+		/* for DNS queries */
+		assert(ip->ip_p == IPPROTO_UDP);
 
-		/* compute tcp payload (segment) size */
+		/* compute udp payload (segment) size */
 		size_payload = ntohs(ip->ip_len) - (size_ip + UDP_HEADER_LEN);
+
 	} else if (version == 6){
 		struct sniff_ipv6* ip = (struct sniff_ipv6*)(packet + SIZE_ETHERNET);
-		
 
-		size_ip = 40; // fixed for ipv6 headers
+		size_ip = 40; /* fixed for ipv6 headers */
 
 		// /* print source and destination IP addresses */
 		// printf("       From: %s\n", inet_ntoa(ip->ip_src));
 		// printf("         To: %s\n", inet_ntoa(ip->ip_dst));
 
-		/* determine protocol */
-		switch(ip->ip_nh) {
-			case IPPROTO_TCP:
-				printf("   Protocol: TCP\n");
-				return;
-			case IPPROTO_UDP:
-				printf("   Protocol: UDP\n");
-				break;
-			case IPPROTO_ICMP:
-				printf("   Protocol: ICMP\n");
-				return;
-			case IPPROTO_IP:
-				printf("   Protocol: IP\n");
-				return;
-			default:
-				printf("   Protocol: unknown\n");
-				return;
-		}
+		/* for DNS queries */
+		assert(ip->ip_nh == IPPROTO_UDP);
 
 		/* compute tcp payload (segment) size */
 		size_payload = ip->ip_len;
@@ -280,11 +245,9 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 	}
 
 	
-
 	/*
 	 *  OK, this packet is UDP.
 	*/
-
 	/* define/compute udp header offset */
 	udp = (struct sniff_udp*)(packet + SIZE_ETHERNET + size_ip);
 
@@ -387,5 +350,5 @@ int main(int argc, char **argv)
 
 	printf("\nCapture complete.\n");
 
-return 0;
+	return 0;
 }
