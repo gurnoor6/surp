@@ -231,14 +231,15 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 		size_ip = 40; /* fixed for ipv6 headers */
 
 		// /* print source and destination IP addresses */
-		// printf("       From: %s\n", inet_ntoa(ip->ip_src));
-		// printf("         To: %s\n", inet_ntoa(ip->ip_dst));
+		char buf[INET6_ADDRSTRLEN];
+		printf("       From: %s\n", inet_ntop(AF_INET6, (void *) &ip->ip_src, buf, INET6_ADDRSTRLEN));
+		printf("         To: %s\n", inet_ntop(AF_INET6, (void *) &ip->ip_dst, buf, INET6_ADDRSTRLEN));
 
 		/* for DNS queries */
 		assert(ip->ip_nh == IPPROTO_UDP);
 
 		/* compute tcp payload (segment) size */
-		size_payload = ip->ip_len;
+		size_payload = (ntohs(ip->ip_len) - UDP_HEADER_LEN);
 	} else {
 		printf("Invalid version\n");
 		return;
