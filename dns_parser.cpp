@@ -40,33 +40,6 @@ struct dns_header {
 	u_int16_t rrcount;	/* number of resource entries */
 };
 
-/*DNS question*/
-struct dns_question {
-	char name[DNS_NAME_LENGTH];
-	u_int16_t type;
-	u_int16_t dns_class;
-};
-
-/*DNS answer*/
-struct dns_answer {
-	char *name;
-	u_int16_t type;
-	u_int16_t dns_class;
-	u_int32_t ttl;
-	u_int16_t len;
-	char *data;
-};
-
-/*DNS authority*/
-struct dns_authority {
-	char *name;
-	u_int16_t type;
-	u_int16_t dns_class;
-	u_int32_t ttl;
-	u_int16_t len;
-	char *data;
-};
-
 /*DNS response record*/
 struct dns_response {
 	u_int16_t dns_name_offset;
@@ -77,60 +50,16 @@ struct dns_response {
 	u_int16_t len;
 };
 
-/*DNS packet*/
-struct dns_packet {
-	struct dns_header header;
-	struct dns_question *question;
-	struct dns_answer *answer;
-	struct dns_authority *authority;
-	struct dns_resource *resource;
-};
 
-void parse_cname_query(const u_char *payload, int initial_offset){
-
-}
-
-// void parse_dns_payload(const u_char *payload){
-// 	struct dns_header *header = (struct dns_header *)payload;
-// 	char *query_name = (char *)(payload + sizeof(struct dns_header));
-// 	std::string dns_query_name = query_name;
-// 	std::transform(dns_query_name.begin(), dns_query_name.end(), dns_query_name.begin(), [](char c){return isprint(c) ? c : '.';});
-
-
-// 	u_short query_type = *(u_short *)(payload + sizeof(struct dns_header) + dns_query_name.size() + 1);
-//     query_type = ntohs(query_type);
-// 	std::cout << "query type:\t" << query_type << std::endl;
-
-// 	if(header -> ancount){
-// 		dns_response *response = (struct dns_response *)(payload + sizeof(struct dns_header) + dns_query_name.size() + 1 + 2*sizeof(u_short));
-// 		std::cout << "response:\t" << ntohs(response->dns_id) << " " << ntohs(response -> type) << " " << ntohs(response -> dns_class) << " " << ntohs(response -> ttl1) <<  " " << ntohs(response -> ttl2) << " " << ntohs(response -> len) << std::endl;
-// 		u_short response_len = ntohs(response -> len);
-// 		// std::cout << "response len:\t" << response_len << std::endl;
-// 		if(response_len == 4){
-// 			struct in_addr response_addr;
-// 			response_addr = *(struct in_addr *)(payload + sizeof(struct dns_header) + dns_query_name.size() + 1 + 2*sizeof(u_short) + sizeof(struct dns_response));
-// 			std::cout << "response:\t" << inet_ntoa(response_addr) << std::endl;
-// 		}
-// 		else{
-// 			struct in6_addr response_addr;
-// 			response_addr = *(struct in6_addr *)(payload + sizeof(struct dns_header) + dns_query_name.size() + 1 + 2*sizeof(u_short) + sizeof(struct dns_response));
-// 			char buf[INET6_ADDRSTRLEN];
-// 			std::cout << "response:\t" << inet_ntop(AF_INET6, (void *)&response_addr, buf, INET6_ADDRSTRLEN) << std::endl;
-// 		}
-// 	}
-	
-
-// 	/* first character is not printable in name */
-// 	dns_query_name = dns_query_name.substr(1, dns_query_name.size()-1);
-// 	std::cout << dns_query_name << std::endl;
-// }
-
+// the string in response contains some non ascii printable characters
+// so we need to convert them to ascii '.'
 void make_printable(string &str){
 	transform(str.begin(), str.end(), str.begin(), [](char c){
         return isprint(c) ? c : '.';
     });	
 }
 
+// process questions in dns payload
 void process_queries(const u_char *payload, int &offset, int num_queries){
     for(int i = 0; i < num_queries; i++){
         char *query_name = (char *)(payload + offset);
@@ -154,6 +83,7 @@ void process_queries(const u_char *payload, int &offset, int num_queries){
     }
 }
 
+// process answers in dns payload
 void process_responses(const u_char *payload, int &offset, int num_answers){
 	for(int i = 0; i < num_answers; i++){
 		struct dns_response *response = (struct dns_response *)(payload + offset);
