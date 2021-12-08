@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <iostream>
+#include <algorithm>
 
 /* default snap length (maximum bytes per packet to capture) */
 #define SNAP_LEN 1518
@@ -19,63 +21,6 @@
 
 /* Ethernet addresses are 6 bytes */
 #define ETHER_ADDR_LEN	6
-
-/*DNS Structure - https://en.wikipedia.org/wiki/Domain_Name_System#Authoritative_name_server*/
-/*DNS header*/
-struct dns_header {
-	u_int16_t id;	/* identification number */			
-	u_int16_t flags;	/* flags */
-	u_int16_t qdcount;	/* number of question entries */
-	u_int16_t ancount;	/* number of answer entries */
-	u_int16_t atcount;	/* number of authority entries */
-	u_int16_t rrcount;	/* number of resource entries */
-};
-
-/*DNS question*/
-struct dns_question {
-	char *name;
-	u_int16_t type;
-	u_int16_t class;
-};
-
-/*DNS answer*/
-struct dns_answer {
-	char *name;
-	u_int16_t type;
-	u_int16_t class;
-	u_int32_t ttl;
-	u_int16_t len;
-	char *data;
-};
-
-/*DNS authority*/
-struct dns_authority {
-	char *name;
-	u_int16_t type;
-	u_int16_t class;
-	u_int32_t ttl;
-	u_int16_t len;
-	char *data;
-};
-
-/*DNS resource record*/
-struct dns_resource {
-	char *name;
-	u_int16_t type;
-	u_int16_t class;
-	u_int32_t ttl;
-	u_int16_t len;
-	char *data;
-};
-
-/*DNS packet*/
-struct dns_packet {
-	struct dns_header header;
-	struct dns_question *question;
-	struct dns_answer *answer;
-	struct dns_authority *authority;
-	struct dns_resource *resource;
-};
 
 /* Ethernet header */
 struct sniff_ethernet {
@@ -239,6 +184,8 @@ void print_payload(const u_char *payload, int len)
 	return;
 }
 
+void parse_dns_payload(const u_char *payload);
+
 /*
  * dissect/print packet
  */
@@ -249,7 +196,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 	/* declare pointers to packet headers */
 	const struct sniff_ethernet *ethernet;  /* The ethernet header [1] */
 	const struct sniff_udp *udp;			/* The UDP header */
-	const char *payload;                    /* Packet payload */
+	const u_char *payload;                    /* Packet payload */
 
 	int size_ip;
 	int size_payload;
@@ -323,6 +270,8 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 		printf("   Payload (%d bytes):\n", size_payload);
 		print_payload(payload, size_payload);
 	}
+
+	parse_dns_payload(payload);
 
 	return;
 }
