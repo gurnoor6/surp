@@ -9,3 +9,6 @@ dns_parser.o: dns_parser.cpp
 
 clean:
 	rm -f dns dns.o dns_parser.o
+
+fs: udp_reader.cpp
+	g++ -std=c++17 udp_reader.cpp -lstdc++fs
