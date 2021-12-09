@@ -1,8 +1,26 @@
 #include <bits/stdc++.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 using namespace std;
 namespace fs = std::filesystem;
+
+struct process_data{
+    int pid;
+    string exe_path;
+    string exe_name;
+    string cmdline;
+    string current_dir;
+    int ppid;
+    int gid;
+    int uid;
+
+    void print(){
+        cout << "PID: " << pid << "\nexe_path: " << exe_path << "\nexe_name: " << exe_name 
+            << "\ncmdline: " << cmdline << endl;
+    }
+};
+
 template<typename T>
 void print(vector<T> &v) {
     for(auto i: v) {
@@ -31,9 +49,28 @@ int getPortFromString(string str){
     return port;
 }
 
-// get process name for given pid
 string getProcessName(int pid){
     string path = "/proc/" + to_string(pid) + "/comm";
+    ifstream file(path);
+    string line;
+    getline(file, line);
+    return line;
+}
+
+string getProcessExecutablePath(int pid){
+    string path = "/proc/" + to_string(pid) + "/exe";
+    int max_buf_len = 2048;
+    char buf[max_buf_len];
+    int len = readlink(path.c_str(), buf, max_buf_len-1); // -1 because null byte has to be appended
+    if(len != -1){
+        buf[len] = '\0';
+        return string(buf);
+    }
+    return "";
+}
+
+string getCommandLine(int pid){
+    string path = "/proc/" + to_string(pid) + "/cmdline";
     ifstream file(path);
     string line;
     getline(file, line);
@@ -88,7 +125,12 @@ void readfile(string filename){
         int inode = stoi(words[9]); // inode is at 9th position
         cout << "src_port: " << src_port << " dest_port: " << dest_port << " inode: " << inode << endl;
         int pid = getPidForInode(inode);
-        cout << "process: " << getProcessName(pid) << endl;
+        struct process_data pd;
+        pd.pid = pid;
+        pd.exe_name = getProcessName(pid);
+        pd.exe_path = getProcessExecutablePath(pid);
+        pd.cmdline = getCommandLine(pid);
+        pd.print();
     }
     file.close();
 }
